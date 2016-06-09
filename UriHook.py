@@ -4,7 +4,7 @@ import getpass
 from bs4 import BeautifulSoup
 
 
-class UriApi:
+class UriHook:
     BASE_URL = "https://www.urionlinejudge.com.br"
     RANK = "/judge/pt/users/me"
     LOGIN = "/judge/pt/login"
@@ -122,7 +122,7 @@ class UriApi:
 if __name__ == '__main__':
     TEST = True
     if TEST:
-        user = UriApi("erickmenezes93@hotmail.com", "teste123")
+        user = UriHook("erickmenezes93@hotmail.com", "teste123")
         # print(user.get_problem(1))
         if user.login_uri():
             print(user.user_information())
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         login = input("Email:")
         password = getpass.getpass()
         print('Logando...')
-        user = UriApi(login, password)
+        user = UriHook(login, password)
         if not user.login_uri():
             print('Usuário ou Senha estao incorretos')
         else:
