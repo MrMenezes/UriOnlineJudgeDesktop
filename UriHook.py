@@ -15,6 +15,7 @@ class UriHook:
     PROBLEM = "/judge/pt/problems/index/"
     VIEWS = "/judge/pt/problems/view/"
     ADD = "/judge/pt/runs/add/"
+    SUBMISSIONS = "/judge/pt/runs"
 
     def __init__(self, email=None, passw=None):
         self.email = email
@@ -114,19 +115,42 @@ class UriHook:
             data.extend(self.get_problem(i, False))
         return json.dumps(data, ensure_ascii=False)
 
-    def test(self):
-        request = self.session.get(self.BASE_URL + self.ADD+str(1002))
+    def get_submissions(self, id_problem, json_format=True):
+        request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
         soup = BeautifulSoup(request.text, "html.parser")
-        source = soup.find('textarea', {'id': 'source-code'}).get('value')
-        print(source)
+        data = list()
+        tablePages = int(soup.find('div', {'id': 'table-info'}).contents[0][-1])
+        for i in range(1, tablePages+1):
+            for item in soup.find('tbody').find_all('tr'):
+                idMatch = int(item.find_all('td', {'class': 'tiny'})[0].find('a').contents[0])
+                if'colspan' in str(item):
+                    break
+                if(idMatch == id_problem):
+                    temp_data = {"id": int(item.find('td').find('a').contents[0]),
+                                 "problemId": idMatch,
+                                 "problemName": str(item.find('td', {'class': 'wide'}).find('a').contents[0]),
+                                 #"answer": str(item.find('td', {'class': 'semi-wide answer a-1'}).find('a').contents[0]),
+                                 "language": str(item.find_all('td', {'class': 'center'})[0].contents[0]),
+                                 "time": float(item.find_all('td', {'class': 'tiny'})[1].contents[0]),
+                                 "date": str(item.find_all('td', {'class': 'center'})[1].contents[0])
+                             }
+                    data.append(temp_data)
+            if i < tablePages:
+                request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
+                soup = BeautifulSoup(request.text, "html.parser")
+        if json_format:
+            return json.dumps(data, ensure_ascii=False)
+        else:
+            return data
+
 if __name__ == '__main__':
     TEST = True
     if TEST:
         user = UriHook("erickmenezes93@hotmail.com", "teste123")
-        # print(user.get_problem(1))
-        if user.login_uri():
-            print(user.user_information())
-            # print(user.get_problem(1))
+        user.login_uri()
+        print('Conectado')
+        print(user.user_information())
+        print(user.get_submissions(1001))
     else:
         login = input("Email:")
         password = getpass.getpass()
