@@ -1,3 +1,4 @@
+import datetime
 import requests
 import json
 import getpass
@@ -74,7 +75,27 @@ class UriHook:
             return False
         else:
             return True
-
+    def post_code(self, id_problem, code, language=5):
+        request = self.session.get(self.BASE_URL + self.ADD + str(id_problem))
+        soup = BeautifulSoup(request.text, "html.parser")
+        csrf_token = soup.find('input', {'name': '_csrfToken'}).get('value')
+        token_fields = soup.find('input', {'name': '_Token[fields]'}).get('value')
+        data = {"_method": "POST",
+                "_csrfToken": csrf_token,
+                "problem_id":id_problem,
+                "language_id":language,
+                "template":1,
+                "source_code":code,
+                "_Token[fields]": token_fields,
+                "_Token[unlocked]": ""
+                }
+        request = self.session.post(self.BASE_URL + self.ADD + str(id_problem), data=data)
+        soup = BeautifulSoup(request.text, "html.parser")
+        success =  soup.find('div', {'class': 'flash-success'}).contents[0]
+        str_date = request.headers['Date'].replace(',','')[:-4]
+        date = datetime.datetime.strptime(str_date, "%a %d %b %Y %H:%M:%S")
+        return date, success
+        
     def is_autenticated(self):
         request = self.session.get(self.BASE_URL + self.HOME)
         soup = BeautifulSoup(request.text, "html.parser")
@@ -115,6 +136,7 @@ class UriHook:
             data.extend(self.get_problem(i, False))
         return json.dumps(data, ensure_ascii=False)
 
+
     def get_submissions(self, id_problem, json_format=True):
         request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
         soup = BeautifulSoup(request.text, "html.parser")
@@ -143,6 +165,7 @@ class UriHook:
         else:
             return data
 
+
 if __name__ == '__main__':
     TEST = True
     if TEST:
@@ -151,14 +174,4 @@ if __name__ == '__main__':
         print('Conectado')
         print(user.user_information())
         print(user.get_submissions(1001))
-    else:
-        login = input("Email:")
-        password = getpass.getpass()
-        print('Logando...')
-        user = UriHook(login, password)
-        if not user.login_uri():
-            print('Usuário ou Senha estao incorretos')
-        else:
-            print('Requisitando dados...')
-            print(user.user_information())
-            print(user.get_problem(8))
+
