@@ -20,16 +20,17 @@ class UriHook:
     SUBMISSIONS = "/judge/pt/runs"
     CODE = "/judge/pt/runs/code/"
 
-    def __init__(self, email=None, passw=None):
+    def __init__(self, email=None, passw=None, *, proxies=None):
         self.email = email
         self.passw = passw
         self.session = requests.Session()
+        self.proxies = proxies
 
     def user_information(self):
-        request = self.session.get(self.BASE_URL + self.HOME)
+        request = self.session.get(self.BASE_URL + self.HOME, proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         progress = soup.find('h2').contents[0].replace("%", "")
-        request = self.session.get(self.BASE_URL + self.PROFILE)
+        request = self.session.get(self.BASE_URL + self.PROFILE, proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         name_user = soup.find('div', {'class': 'pb-username'}).find('a').contents[0]
         rankuser = soup.find('ul', {'class': 'pb-information'}).find_all('li')[0].contents[2].strip() \
@@ -39,7 +40,7 @@ class UriHook:
         solved = soup.find('ul', {'class': 'pb-information'}).find_all('li')[4].contents[2].strip()
         trying = soup.find('ul', {'class': 'pb-information'}).find_all('li')[5].contents[2].strip()
         submitted = soup.find('ul', {'class': 'pb-information'}).find_all('li')[6].contents[2].strip()
-        request = self.session.get(self.BASE_URL + self.UNIVERSITY)
+        request = self.session.get(self.BASE_URL + self.UNIVERSITY, proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         rank = soup.find('tr', {'class': 'you-here'})
         rank_value = rank.find(soup.find('tr', {'class': 'medium'}))
@@ -56,7 +57,7 @@ class UriHook:
         return json.dumps(result_json)
 
     def login_uri(self):
-        request = self.session.get(self.BASE_URL + self.RANK)
+        request = self.session.get(self.BASE_URL + self.RANK,proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         csrf_token = soup.find('input', {'name': '_csrfToken'}).get('value')
         token_fields = soup.find('input', {'name': '_Token[fields]'}).get('value')
@@ -69,7 +70,7 @@ class UriHook:
                 "_Token[unlocked]": ""
                 }
         self.session.post(self.BASE_URL + self.LOGIN, data=data)
-        request = self.session.get(self.BASE_URL + self.HOME)
+        request = self.session.get(self.BASE_URL + self.HOME,proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         self.PROFILE = soup.find('ul', {'id': 'menu'}).find_all('a')[1].get('href')
         #TODO Change to Exit
@@ -78,7 +79,7 @@ class UriHook:
         else:
             return True
     def post_code(self, id_problem, code, language=5):
-        request = self.session.get(self.BASE_URL + self.ADD + str(id_problem))
+        request = self.session.get(self.BASE_URL + self.ADD + str(id_problem),proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         csrf_token = soup.find('input', {'name': '_csrfToken'}).get('value')
         token_fields = soup.find('input', {'name': '_Token[fields]'}).get('value')
@@ -99,7 +100,7 @@ class UriHook:
         return success, date
         
     def is_autenticated(self):
-        request = self.session.get(self.BASE_URL + self.HOME)
+        request = self.session.get(self.BASE_URL + self.HOME,proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         self.PROFILE = soup.find('ul', {'id': 'menu'}).find_all('a')[1].get('href')
         if 'forum' in self.PROFILE:
@@ -108,7 +109,7 @@ class UriHook:
             return True
 
     def get_problem(self, id_problem, json_format=True):
-        request = self.session.get(self.BASE_URL + self.PROBLEM + str(id_problem))
+        request = self.session.get(self.BASE_URL + self.PROBLEM + str(id_problem),proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         data = list()
         finish = int(soup.find('div', {'id': 'table-info'}).contents[0][-1])
@@ -119,13 +120,15 @@ class UriHook:
                 temp_data = {"id": int(item.find('td').find('a').contents[0]),
                              "name": item.find('td', {'class': 'large'}).find('a').contents[0],
                              "subject": item.find_all('td', {'class': 'large'})[1].contents[0].strip(),
-                             "resolved": int(item.find('td', {'class': 'small'}).contents[0].strip().replace(',', '').replace('.', '')),
+                             "resolved": int(item.find('td', {'class': 'small'}).contents[0].strip().replace(',', '')
+                                             .replace('.', '')),
                              "level": str(item.find_all('td', {'class': 'tiny'})[1].contents[0]),
                              "done": len(item.find('td', {'class': 'tiny'}).contents) > 1
                              }
                 data.append(temp_data)
             if i < finish:
-                request = self.session.get(self.BASE_URL + self.PROBLEM + str(id_problem) + "?page=" + str(i+1))
+                request = self.session.get(self.BASE_URL + self.PROBLEM + str(id_problem) + "?page=" + str(i+1),
+                                           proxies=self.proxies)
                 soup = BeautifulSoup(request.text, "html.parser")
         if json_format:
             return json.dumps(data, indent=4, ensure_ascii=False)
@@ -138,9 +141,8 @@ class UriHook:
             data.extend(self.get_problem(i, False))
         return json.dumps(data, ensure_ascii=False, indent=4)
 
-
     def get_submissions_id(self, id_problem, json_format=True):
-        request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
+        request = self.session.get(self.BASE_URL + self.SUBMISSIONS, proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         data = list()
         tablePages = int(soup.find('div', {'id': 'table-info'}).contents[0][-1])
@@ -161,15 +163,15 @@ class UriHook:
                              }
                     data.append(temp_data)
             if i < tablePages:
-                request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
+                request = self.session.get(self.BASE_URL + self.SUBMISSIONS, proxies=self.proxies)
                 soup = BeautifulSoup(request.text, "html.parser")
         if json_format:
-            return json.dumps(data, ensure_ascii=False,indent=4)
+            return json.dumps(data, ensure_ascii=False, indent=4)
         else:
             return data
         
     def get_submissions(self, id_problem, timestamp, json_format=True):
-        request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
+        request = self.session.get(self.BASE_URL + self.SUBMISSIONS, proxies=self.proxies)
         soup = BeautifulSoup(request.text, "html.parser")
         data = list()
         tablePages = int(soup.find('div', {'id': 'table-info'}).contents[0][-1])
@@ -178,7 +180,7 @@ class UriHook:
                 idMatch = int(item.find_all('td', {'class': 'tiny'})[0].find('a').contents[0])
                 id_sub = int(item.find('td').find('a').contents[0])
                 sub_date = str(item.find_all('td', {'class': 'center'})[1].contents[0]).strip()
-                answer = str( item.find_all( 'a', {'href': self.CODE + str(id_sub) })[1].contents[0])
+                answer = str( item.find_all( 'a', {'href': self.CODE + str(id_sub)})[1].contents[0])
                 if'colspan' in str(item):
                     break
                 if(idMatch == id_problem):
@@ -192,7 +194,7 @@ class UriHook:
                              }
                     return json.dumps(temp_data, indent=4, ensure_ascii=False)
             if i < tablePages:
-                request = self.session.get(self.BASE_URL + self.SUBMISSIONS)
+                request = self.session.get(self.BASE_URL + self.SUBMISSIONS, proxies=self.proxies)
                 soup = BeautifulSoup(request.text, "html.parser")
         
     def get_code(self, file):
@@ -201,22 +203,26 @@ class UriHook:
 if __name__ == '__main__':
     TEST = True
     if TEST:
-        user = UriHook("erickmenezes93@hotmail.com", "teste123")
+        proxies = {
+          'http': 'http://19.12.1.40:83',
+          'https': 'http://19.12.2.140:83',
+        }
+        user = UriHook("erickmenezes93@hotmail.com", "teste123", proxies=proxies)
         user.login_uri()
         print('Conectado')
         print('Pegar Problemas Iniciates')
-        print(user.get_problem(1))
+        print(user.get_problem(1).encode("utf-8"))
         print('Postar Código Errado')
         code = user.get_code('E1001.py')
         print(code)
         message, date = user.post_code(1001, code)
-        print(message)
+        print(message.encode("utf-8"))
         date = date.strftime("%d/%m/%y %H:%M:%S")
-        print(user.get_submissions(1001,date))
+        print(user.get_submissions(1001,date).encode("utf-8"))
         print('Postar Código Correto')
         code = user.get_code('1001.py')
         print(code)
         message, date = user.post_code(1001, code)
-        print(message)
+        print(message.encode("utf-8"))
         date = date.strftime("%d/%m/%y %H:%M:%S")
-        print(user.get_submissions(1001,date))  
+        print(user.get_submissions(1001,date).encode("utf-8"))  
